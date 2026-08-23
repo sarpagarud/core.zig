@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const Csv = struct {
+  file: []const u8,
   allocator: std.mem.Allocator,
   headers: [][]const u8,
   rows: std.ArrayList(std.StringHashMap([]const u8)),
@@ -31,6 +32,15 @@ const Csv = struct {
     return self.get_csv_line(csv_list, "\n");
   }
 
+  fn save_csv(
+    file: []const u8,
+    data: []const u8
+  ) !void {
+    const f = try std.fs.cwd().openFile(file, .{ .mode = .write_only });
+    defer f.close();
+    try f.writeAll(data);
+  }
+
   fn get_csv_line(
     list: *std.ArrayList([]const u8), 
     line: []const u8,
@@ -45,10 +55,10 @@ const Csv = struct {
     }
   }
 
-  pub fn read_csv(self: *Csv, file: []const u8) void {
+  fn read_csv(self: *Csv) void {
     const text = try std.Io.Dir.cwd().readFileAlloc(
       io,
-      file,
+      self.file,
       self.allocator,
       .unlimited,
     );
@@ -67,5 +77,9 @@ const Csv = struct {
       }
       try rows.append(self.allocator, row_map);
     }
+  }
+  pub fn init(self: *Csv, file: []const u8) !void {
+    self.file = try file.toOwnedSlice(self.allocator);
+    self.read_csv();
   }
 }
