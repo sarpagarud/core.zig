@@ -1,4 +1,8 @@
 # core.zig
+
+> [!NOTE]
+> Originated from https://github.com/sarpagarud/unemployed-zig
+
 Core zig library
 
 ## Installation
