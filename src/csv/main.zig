@@ -16,14 +16,19 @@ const Csv = struct {
     list: *std.ArrayList([]const u8),
     seperator: []const u8
   ) ![]const u8 {
+    var csv_list: std.ArrayList([]const u8) = .empty;
     for(row.items) |h|{
-      var s = "";
       var it = self.rows.iterator();
+      var l: std.ArrayList([]const u8) = .empty;
       while (it.next()) |e| {
-        s = try std.mem.join(self.allocator, seperator, e.value_ptr.*);
+        l.appendSlice(self.allocator, e.value_ptr.*);
       }
-      
+      var s = try self.get_csv_line(l, seperator);
+      csv_list.appendSlice(self.allocator, s);
+      l.clearRetainingCapacity();
     }
+    csv_list.clearRetainingCapacity();
+    return self.get_csv_line(csv_list, "\n");
   }
 
   fn get_csv_line(
