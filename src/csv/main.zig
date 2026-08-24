@@ -99,3 +99,7 @@ const Csv = struct {
   }
 
 }
+
+pub fn hello() !void {
+  std.debug.print("{s}\n", .{"hello from csv!"});
+}
