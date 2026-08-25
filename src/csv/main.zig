@@ -12,6 +12,7 @@ pub const Csv = struct {
     seperator: []const u8
   ) ![]const u8 {
     const allocator = self.arena_allocator();
+    // try std.fmt.allocPrint(allocator, "{s}", .{list.items});
     return try std.mem.join(allocator, seperator, list.items);
   }
 
