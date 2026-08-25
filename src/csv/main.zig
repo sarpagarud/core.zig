@@ -3,8 +3,8 @@ const std = @import("std");
 pub const Csv = struct {
   file: []const u8,
   arena: std.heap.ArenaAllocator,
-  headers: [][]const u8 = .{},
-  rows: std.ArrayList(std.StringHashMap([]const u8)) = .{},
+  headers: [][]const u8 = &.{},
+  rows: std.ArrayList(std.StringHashMap([]const u8)) = .empty,
 
   fn get_csv_line_str(
     self: *Csv,
@@ -55,7 +55,7 @@ pub const Csv = struct {
   ) !void {
     if (line.len == 0) return;
     const allocator = self.arena_allocator();
-    var cols = std.mem.splitScalar(u8, line, seperator);
+    var cols = std.mem.splitSequence(u8, line, seperator); //splitScalar
     while (cols.next()) |col| {
       try list.append(allocator, try allocator.dupe(
         u8, std.mem.trim(u8, col, " \r") 
@@ -63,7 +63,7 @@ pub const Csv = struct {
     }
   }
 
-  fn read_csv(self: *Csv, io: std.Io,) void {
+  fn read_csv(self: *Csv, io: std.Io,) !void {
     const allocator = self.arena_allocator();
     const text = try std.Io.Dir.cwd().readFileAlloc(
       io,
@@ -73,16 +73,18 @@ pub const Csv = struct {
     );
     var lines = std.mem.splitScalar(u8, text, '\n');
     while (lines.next()) |line| {
-      try get_csv_line(allocator, &self.headers, line);
+      var row: std.ArrayList([]const u8) = .empty;
+      try self.get_csv_line(&row, line, ",");
+      self.headers = try row.toOwnedSlice(allocator);
       break;
     }
     while (lines.next()) |line| {
       var row: std.ArrayList([]const u8) = .empty;
       defer row.deinit(allocator);
       var row_map = std.StringHashMap([]const u8).init(allocator);
-      try get_csv_line(allocator, &row, line);
+      try self.get_csv_line(&row, line, ", ");
       for (row.items, 0..) |value, j| {
-        try row_map.put(self.headers.items[j], value);
+        try row_map.put(self.headers[j], value);
       }
       try self.rows.append(allocator, row_map);
     }
@@ -92,15 +94,25 @@ pub const Csv = struct {
       return self.arena.allocator();
   }
 
-  pub fn init(self: *Csv, allocator: std.mem.Allocator, file: []const u8) Csv {
-    return .{
-      .arena = std.heap.ArenaAllocator.init(allocator),
-      .file = try file.toOwnedSlice(self.allocator),
+  pub fn init(io: std.Io, allocator: std.mem.Allocator, file: []const u8) !Csv {
+    const arena = std.heap.ArenaAllocator.init(allocator);
+    var csv = Csv{
+      .arena = arena,
+      .file = file,
     };
+    try csv.read_csv(io);
+    return csv;
   }
 
-  pub fn deinit(self: *Csv) !void {
+  pub fn deinit(self: *const Csv) void {
     self.arena.deinit();
+  }
+
+  pub fn print_headers(self: *const Csv) !void {
+    for(self.headers) |h|{
+      std.debug.print("{s} ", .{h});
+    }
+    std.debug.print("\n", .{});
   }
 
 };
