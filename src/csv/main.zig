@@ -89,7 +89,7 @@ pub const Csv = struct {
       var row: std.ArrayList([]const u8) = .empty;
       defer row.deinit(allocator);
       var row_map = std.StringHashMap([]const u8).init(allocator);
-      try self.get_csv_line(&row, line, ", ");
+      try self.get_csv_line(&row, line, ",");
       for (row.items, 0..) |value, j| {
         try row_map.put(self.headers[j], value);
       }
@@ -123,11 +123,29 @@ pub const Csv = struct {
   }
   
   pub fn print_rows(self: *const Csv) !void {
-    var it = self.rows.iterator();
-    while (it.next()) |e| {
-      std.debug.print("{s} ", .{e.value_ptr.*});
+    for(self.rows.items) |h| {
+      var it = h.iterator();
+      while (it.next()) |e| {
+        std.debug.print("{s} ", .{e.value_ptr.*});
+      }
+      std.debug.print("\n", .{});
     }
-    std.debug.print("\n", .{});
+  }
+
+  pub fn print_rows_by_key_value(
+    self: *const Csv, 
+    key: []const u8, 
+    value: []const u8
+  ) !void {
+    for(self.rows.items) |row| {
+      const cell = row.get(key) orelse return;
+      if (!std.mem.eql(u8, cell, value)) continue;
+      for (self.headers) |name| {
+          const val = row.get(name) orelse "";
+          std.debug.print("{s} ", .{val});
+      }
+      std.debug.print("\n", .{});
+    }
   }
 
   pub fn save_csv_content(self: *const Csv, file: []const u8) !void {
