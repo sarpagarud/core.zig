@@ -150,6 +150,46 @@ pub const Csv = struct {
     }
   }
 
+  pub fn save_rows_by_key_value(
+    self: *const Csv, 
+    key: []const u8, 
+    value: []const u8,
+    file: []const u8,
+  ) !void {
+    const allocator = self.arena_allocator();
+    var csv_list: std.ArrayList([]const u8) = .empty;
+    var l: std.ArrayList([]const u8) = .empty;
+    for(self.headers) |h|{
+      l.appendSlice(allocator, h);
+    }
+    csv_list.appendSlice(
+      allocator, 
+      try self.get_csv_line_str(l, seperator)
+    );
+    l.clearRetainingCapacity();
+    for(self.rows.items) |row| {
+      if (key.len != 0 and value.len != 0) {
+        const cell = row.get(key) orelse return;
+        if (!std.mem.eql(u8, cell, value)) continue;
+      }
+      l = .empty;
+      for (self.headers) |name| {
+          const val = row.get(name) orelse "";
+          l.appendSlice(allocator, h);
+      }
+      csv_list.appendSlice(
+        allocator, 
+        try self.get_csv_line_str(l, seperator)
+      );
+      l.clearRetainingCapacity();
+      std.debug.print("\n", .{});
+    }
+    try self.save_csv_content(
+      file, 
+      try self.get_csv_line_str(csv_list, "\n")
+    );
+  }
+
   pub fn save_csv_content(self: *const Csv, file: []const u8) !void {
     const content = try self.get_csv_lines_str(",");
     try self.save_csv(file, content);
