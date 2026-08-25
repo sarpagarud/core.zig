@@ -17,14 +17,21 @@ pub const Csv = struct {
 
   fn get_csv_lines_str(
     self: *Csv,
-    list: *std.ArrayList([]const u8),
     seperator: []const u8
   ) ![]const u8 {
     const allocator = self.arena_allocator();
     var csv_list: std.ArrayList([]const u8) = .empty;
-    for(list.items) |h|{
+    var l: std.ArrayList([]const u8) = .empty;
+    for(self.headers) |h|{
+      l.appendSlice(allocator, h);
+    }
+    csv_list.appendSlice(
+      allocator, try self.get_csv_line_str(l, seperator)
+    );
+    l.clearRetainingCapacity();
+    for(self.rows.items) |h|{
       var it = h.iterator();
-      var l: std.ArrayList([]const u8) = .empty;
+      l = .empty;
       while (it.next()) |e| {
         l.appendSlice(allocator, e.value_ptr.*);
       }
@@ -114,7 +121,19 @@ pub const Csv = struct {
     }
     std.debug.print("\n", .{});
   }
+  
+  pub fn print_rows(self: *const Csv) !void {
+    var it = self.rows.iterator();
+    while (it.next()) |e| {
+      std.debug.print("{s} ", .{e.value_ptr.*});
+    }
+    std.debug.print("\n", .{});
+  }
 
+  pub fn save_csv_content(self: *const Csv, file: []const u8) !void {
+    const content = try self.get_csv_lines_str(",");
+    try self.save_csv(file, content);
+  }
 };
 
 pub fn hello() !void {
