@@ -138,8 +138,10 @@ pub const Csv = struct {
     value: []const u8
   ) !void {
     for(self.rows.items) |row| {
-      const cell = row.get(key) orelse return;
-      if (!std.mem.eql(u8, cell, value)) continue;
+      if (key.len != 0 and value.len != 0) {
+        const cell = row.get(key) orelse return;
+        if (!std.mem.eql(u8, cell, value)) continue;
+      }
       for (self.headers) |name| {
           const val = row.get(name) orelse "";
           std.debug.print("{s} ", .{val});
