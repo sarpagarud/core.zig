@@ -165,7 +165,7 @@ pub const Csv = struct {
     }
     csv_list.appendSlice(
       allocator, 
-      try self.get_csv_line_str(l, seperator)
+      try self.get_csv_line_str(l, ",")
     );
     l.clearRetainingCapacity();
     for(self.rows.items) |row| {
@@ -176,11 +176,11 @@ pub const Csv = struct {
       l = .empty;
       for (self.headers) |name| {
           const val = row.get(name) orelse "";
-          l.appendSlice(allocator, h);
+          l.appendSlice(allocator, name);
       }
       csv_list.appendSlice(
         allocator, 
-        try self.get_csv_line_str(l, seperator)
+        try self.get_csv_line_str(l, ",")
       );
       l.clearRetainingCapacity();
       std.debug.print("\n", .{});
