@@ -12,7 +12,6 @@ pub const Csv = struct {
     seperator: []const u8
   ) ![]const u8 {
     const allocator = self.arena_allocator();
-    // try std.fmt.allocPrint(allocator, "{s}", .{list.items});
     return try std.mem.join(allocator, seperator, list.items);
   }
 
@@ -124,13 +123,11 @@ pub const Csv = struct {
   }
   
   pub fn print_rows(self: *const Csv) !void {
-    for(self.rows.items) |h| {
-      var it = h.iterator();
-      while (it.next()) |e| {
-        std.debug.print("{s} ", .{e.value_ptr.*});
-      }
-      std.debug.print("\n", .{});
+    var it = self.rows.iterator();
+    while (it.next()) |e| {
+      std.debug.print("{s} ", .{e.value_ptr.*});
     }
+    std.debug.print("\n", .{});
   }
 
   pub fn print_rows_by_key_value(
@@ -176,7 +173,7 @@ pub const Csv = struct {
       l = .empty;
       for (self.headers) |name| {
           const val = row.get(name) orelse "";
-          l.appendSlice(allocator, name);
+          l.appendSlice(allocator, val);
       }
       csv_list.appendSlice(
         allocator, 
