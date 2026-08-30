@@ -163,6 +163,7 @@ pub const Csv = struct {
       const key = e.key_ptr.*;
       const val = e.value_ptr.*;
       var csv_vals:std.ArrayList([]const u8)= .empty;
+      try csv_vals.append(allocator, try std.mem.join(allocator, ",", headers));
       for(val.items) |row| {
         //var vit = row.iterator();
         var vals:std.ArrayList([]const u8)= .empty;
