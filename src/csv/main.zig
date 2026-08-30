@@ -164,12 +164,16 @@ pub const Csv = struct {
       const val = e.value_ptr.*;
       var csv_vals:std.ArrayList([]const u8)= .empty;
       for(val.items) |row| {
-        var vit = row.iterator();
+        //var vit = row.iterator();
         var vals:std.ArrayList([]const u8)= .empty;
-        while (vit.next()) |v| {
-          const value = v.value_ptr.*;
+        for(headers) |col| {
+          const value = row.get(col) orelse "";
           try vals.append(allocator, value);
         }
+        //while (vit.next()) |v| {
+        //  const value = v.value_ptr.*;
+        //  try vals.append(allocator, value);
+        //}
         try csv_vals.append(allocator, try std.mem.join(allocator, ",", vals.items));
       }
       const s = try std.mem.join(allocator, "\n", csv_vals.items);
