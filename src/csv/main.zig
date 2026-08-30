@@ -115,6 +115,44 @@ pub const Csv = struct {
     self.arena.deinit();
   }
 
+  pub fn test(io: std.Io, allocator: std.mem.Allocator, file: []const u8) !void {
+    const arena = std.heap.ArenaAllocator.init(allocator);
+    const allocator = self.arena.allocator();
+    const headers: [][]const u8 = &.{},
+    const rows: std.StringHashMap([]const u8).init(allocator);
+    const text = try std.Io.Dir.cwd().readFileAlloc(
+      io,
+      file,
+      allocator,
+      .unlimited,
+    );
+    var lines = std.mem.splitScalar(u8, text, '\n');
+    while (lines.next()) |line| {
+      var row: std.ArrayList([]const u8) = .empty;
+      try self.get_csv_line(&row, line, ",");
+      headers = try row.toOwnedSlice(allocator);
+      break;
+    }
+    while (lines.next()) |line| {
+      var row: std.ArrayList([]const u8) = .empty;
+      var row_map = std.StringHashMap([]const u8).init(allocator);
+      try self.get_csv_line(&row, line, ",");
+      for (row.items, 0..) |value, j| {
+        try row_map.put(self.headers[j], value);
+      }
+      if(row_map.get("COUNTRY")) {
+        if(rows.get(row_map.get("COUNTRY"))) {
+          var val: std.ArrayList(std.StringHashMap([]const u8)) = .empty;
+          rows.put(row_map.get("COUNTRY"), val);
+        } else {
+          try (rows.get(row_map.get("COUNTRY")).append(allocator, row_map);
+        }
+      }
+    }
+    
+    return;
+  }
+
   pub fn print_headers(self: *const Csv) !void {
     for(self.headers) |h|{
       std.debug.print("{s} ", .{h});
