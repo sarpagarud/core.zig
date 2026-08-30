@@ -115,11 +115,11 @@ pub const Csv = struct {
     self.arena.deinit();
   }
 
-  pub fn test(io: std.Io, allocator: std.mem.Allocator, file: []const u8) !void {
-    const arena = std.heap.ArenaAllocator.init(allocator);
-    const allocator = self.arena.allocator();
-    const headers: [][]const u8 = &.{},
-    const rows: std.StringHashMap([]const u8).init(allocator);
+  pub fn test_create_csv(self: *const Csv, io: std.Io, gpa_allocator: std.mem.Allocator, file: []const u8) !void {
+    var arena = std.heap.ArenaAllocator.init(gpa_allocator);
+    const allocator = arena.allocator();
+    const headers: [][]const u8 = &.{};
+    const rows: std.StringHashMap([]const u8).init(allocator) = .empty;
     const text = try std.Io.Dir.cwd().readFileAlloc(
       io,
       file,
@@ -142,10 +142,10 @@ pub const Csv = struct {
       }
       if(row_map.get("COUNTRY")) {
         if(rows.get(row_map.get("COUNTRY"))) {
-          var val: std.ArrayList(std.StringHashMap([]const u8)) = .empty;
+          const val: std.ArrayList(std.StringHashMap([]const u8)) = .empty;
           rows.put(row_map.get("COUNTRY"), val);
         } else {
-          try (rows.get(row_map.get("COUNTRY")).append(allocator, row_map);
+          try rows.get(row_map.get("COUNTRY")).append(allocator, row_map);
         }
       }
     }
@@ -159,7 +159,7 @@ pub const Csv = struct {
         var vit = row.iterator();
         const vals:std.ArrayList([]const u8)= .empty;
         while (vit.next()) |v| {
-          const value = e.value_ptr.*;
+          const value = v.value_ptr.*;
           try vals.append(allocator, value);
         }
         try csv_vals.append(allocator, try std.mem.join(allocator, ",", vals.items));
