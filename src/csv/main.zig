@@ -149,7 +149,30 @@ pub const Csv = struct {
         }
       }
     }
-    
+    var it = rows.iterator();
+    while (it.next()) |e| {
+      std.debug.print("{s} ", .{e.key_ptr.*});
+      const key = e.key_ptr.*;
+      const val = e.value_ptr.*;
+      const csv_vals:std.ArrayList([]const u8)= .empty;
+      for(val.items) |row| {
+        var vit = row.iterator();
+        const vals:std.ArrayList([]const u8)= .empty;
+        while (vit.next()) |v| {
+          const value = e.value_ptr.*;
+          try vals.append(allocator, value);
+        }
+        try csv_vals.append(allocator, try std.mem.join(allocator, ",", vals.items));
+      }
+      const s = try std.mem.join(allocator, "\n", csv_vals.items);
+      const file_name = std.fmt.allocPrint(
+        allocator,"{s}.csv",.{key}
+      ) catch unreachable;
+      try std.Io.Dir.cwd().writeFile(io, .{
+        .sub_path = file_name,
+        .data = s,
+      });
+    }
     return;
   }
 
