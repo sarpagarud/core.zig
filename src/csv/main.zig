@@ -115,11 +115,13 @@ pub const Csv = struct {
     self.arena.deinit();
   }
 
-  pub fn test_create_csv(self: *const Csv, io: std.Io, gpa_allocator: std.mem.Allocator, file: []const u8) !void {
+  pub fn test_create_csv(self: *Csv, io: std.Io, gpa_allocator: std.mem.Allocator, file: []const u8) !void {
     var arena = std.heap.ArenaAllocator.init(gpa_allocator);
+    defer arena.deinit();
     const allocator = arena.allocator();
-    const headers: [][]const u8 = &.{};
-    const rows: std.StringHashMap([]const u8).init(allocator) = .empty;
+    var headers: [][]const u8 = &.{};
+    var rows = std.StringHashMap(std.ArrayList(std.StringHashMap([]const u8))).init(allocator);
+    //var rows: std.StringHashMapUnmanaged([]const u8) = .empty;
     const text = try std.Io.Dir.cwd().readFileAlloc(
       io,
       file,
@@ -140,13 +142,19 @@ pub const Csv = struct {
       for (row.items, 0..) |value, j| {
         try row_map.put(self.headers[j], value);
       }
-      if(row_map.get("COUNTRY")) {
-        if(rows.get(row_map.get("COUNTRY"))) {
-          const val: std.ArrayList(std.StringHashMap([]const u8)) = .empty;
-          rows.put(row_map.get("COUNTRY"), val);
-        } else {
-          try rows.get(row_map.get("COUNTRY")).append(allocator, row_map);
+      if (row_map.get("COUNTRY")) |country| {
+        const entry = try rows.getOrPut(country);
+        if (!entry.found_existing) {
+            entry.value_ptr.* = .empty;
         }
+        try entry.value_ptr.append(allocator, row_map);
+
+        //if(rows.get(country)) |v| {
+        //  try v.append(allocator, row_map);
+        //} else {
+        //  //var val: std.ArrayList(std.StringHashMap([]const u8)) = .empty;
+        //  try rows.put(country, .empty);
+        //}
       }
     }
     var it = rows.iterator();
@@ -154,10 +162,10 @@ pub const Csv = struct {
       std.debug.print("{s} ", .{e.key_ptr.*});
       const key = e.key_ptr.*;
       const val = e.value_ptr.*;
-      const csv_vals:std.ArrayList([]const u8)= .empty;
+      var csv_vals:std.ArrayList([]const u8)= .empty;
       for(val.items) |row| {
         var vit = row.iterator();
-        const vals:std.ArrayList([]const u8)= .empty;
+        var vals:std.ArrayList([]const u8)= .empty;
         while (vit.next()) |v| {
           const value = v.value_ptr.*;
           try vals.append(allocator, value);
@@ -166,7 +174,7 @@ pub const Csv = struct {
       }
       const s = try std.mem.join(allocator, "\n", csv_vals.items);
       const file_name = std.fmt.allocPrint(
-        allocator,"{s}.csv",.{key}
+        allocator,"./data/{s}.csv",.{key}
       ) catch unreachable;
       try std.Io.Dir.cwd().writeFile(io, .{
         .sub_path = file_name,
